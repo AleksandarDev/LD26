@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<layerModel xmlns:dm0="http://schemas.microsoft.com/VisualStudio/2008/DslTools/Core" xmlns:dm1="http://schemas.microsoft.com/dsltools/SimpleShapesModel" dslVersion="1.0.0.0" Id="a99d1d2c-a1f7-4e01-af49-6cec99ffa7e0" xmlns="http://schemas.microsoft.com/VisualStudio/TeamArchitect/LayerDesigner">
+  <layers>
+    <layer Id="2c29e519-432e-46d3-a3e3-2ca1ab14656b" name="Squared">
+      <description>Game layer</description>
+      <dependencyToLayers>
+        <dependencyFromLayerToLayer Id="65b45d64-4a74-4cce-bacf-addd6f966b9e" direction="Forward">
+          <layerMoniker Id="0c824bd9-f4e9-4ee4-a176-0b1b383feb1d" />
+        </dependencyFromLayerToLayer>
+      </dependencyToLayers>
+    </layer>
+    <layer Id="0c824bd9-f4e9-4ee4-a176-0b1b383feb1d" name="SquaredEngine" forbiddenNamespace="Squared">
+      <description>Squared game engine</description>
+      <childLayers>
+        <layer Id="aec92ffd-4b8f-486b-8cb1-fd0eacaa0b08" name="Graphics">
+          <description>Graphics library</description>
+        </layer>
+        <layer Id="fcbd62bb-00b6-4532-9cbc-34d41f557a5e" name="Input">
+          <description>Input library</description>
+        </layer>
+        <layer Id="4710f337-1792-4c1d-99f0-cf20f23cedb7" name="Media">
+          <description>Media library</description>
+        </layer>
+        <layer Id="d4bcb5c1-5119-4208-b840-013ab5e1135c" name="Network">
+          <description>Network library</description>
+        </layer>
+        <layer Id="aa7b02e7-31b0-43e4-b627-db6da1935d66" name="Common">
+          <dependencyToLayers>
+            <dependencyFromLayerToLayer Id="11b4a827-94a7-4b72-8517-5cfcf08fc603" direction="Forward">
+              <layerMoniker Id="d4bcb5c1-5119-4208-b840-013ab5e1135c" />
+            </dependencyFromLayerToLayer>
+            <dependencyFromLayerToLayer Id="a57e49dd-5a2d-44f5-8560-abf879228a87" direction="Forward">
+              <layerMoniker Id="4710f337-1792-4c1d-99f0-cf20f23cedb7" />
+            </dependencyFromLayerToLayer>
+            <dependencyFromLayerToLayer Id="73362e09-de35-41b3-a88b-5fcb6613af98" direction="Forward">
+              <layerMoniker Id="aec92ffd-4b8f-486b-8cb1-fd0eacaa0b08" />
+            </dependencyFromLayerToLayer>
+            <dependencyFromLayerToLayer Id="8bc86294-da6c-490e-8b84-e09ad1618d08" direction="Forward">
+              <layerMoniker Id="fcbd62bb-00b6-4532-9cbc-34d41f557a5e" />
+            </dependencyFromLayerToLayer>
+          </dependencyToLayers>
+        </layer>
+        <layer Id="4eabfe52-3b39-4714-a31f-d53c472f1a1a" name="Diagnostics">
+          <childLayers>
+            <layer Id="c88e127a-619d-4153-bbc0-b7c51fbc866c" name="Debug">
+              <dependencyToLayers>
+                <dependencyFromLayerToLayer Id="2db7a029-3efc-46a5-87f1-28ae92dad4ea" direction="Forward">
+                  <layerMoniker Id="83c0f764-51d0-4bba-b706-98b4f7b7b84a" />
+                </dependencyFromLayerToLayer>
+              </dependencyToLayers>
+            </layer>
+            <layer Id="83c0f764-51d0-4bba-b706-98b4f7b7b84a" name="Log" />
+          </childLayers>
+        </layer>
+      </childLayers>
+    </layer>
+  </layers>
+</layerModel>

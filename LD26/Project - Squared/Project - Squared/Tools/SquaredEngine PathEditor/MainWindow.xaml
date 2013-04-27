@@ -1,0 +1,27 @@
+﻿<Window x:Class="SquaredEngine.PathEditor.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:local="clr-namespace:SquaredEngine.PathEditor"
+        Title="SquaredEngine - Path editor" Height="656" Width="1030" Loaded="Window_Loaded">
+    <Grid Name="WindowGrid">
+		<local:GamePanel x:Name="GamePanel" Game="{Binding Game}" Width="800" Height="600" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="8,8,0,8">
+			<local:GamePanel.ContextMenu>
+				<ContextMenu>
+					<MenuItem Header="Select/Move" />
+					<Separator />
+					<MenuItem Header="Add" />
+					<MenuItem Header="Remove" />
+					<Separator />
+					<MenuItem Header="Split" />
+				</ContextMenu>
+			</local:GamePanel.ContextMenu>
+		</local:GamePanel>
+		<ComboBox Height="23" HorizontalAlignment="Left" Margin="878,14,0,0" Name="comboBoxTool" VerticalAlignment="Top" Width="120" SelectedIndex="1" SelectionChanged="comboBoxTool_SelectionChanged">
+			<ComboBoxItem Content="Select/Move" />
+			<ComboBoxItem Content="Add" />
+			<ComboBoxItem Content="Remove" />
+			<ComboBoxItem Content="Split" />
+		</ComboBox>
+		<Label Content="Path tool" Height="28" HorizontalAlignment="Left" Margin="814,12,0,0" VerticalAlignment="Top" />
+	</Grid>
+</Window>

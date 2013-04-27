@@ -1,0 +1,4 @@
+﻿Squared.Graphics notes by Aleksandar Toplek
+
+- [POLYGONS] Trazenje centra poligona: http://coding-experiments.blogspot.com/2009/09/xna-quest-for-centroid-of-polygon.html
+- Potrebno je za svaki oblik dodati Geometry klasu/strukturu da bi se izbjeglo nepotrebno inicijaliziranje VertexPositionColor varijabli ukoliko se oblici ne iscrtavaju

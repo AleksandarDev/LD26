@@ -1,0 +1,29 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<title>Untitled Page</title>
+</head>
+<body onload="FillWithBoxes(15,15,32,32);">
+	<canvas width="1024" height="768" id="canvasBoard">
+		Your browser doesn't support HTML 5 standards!
+	</canvas>
+
+	<script type="text/javascript">
+		function FillWithBoxes(x, y, width, height) {
+			var context = document.getElementById("canvasBoard").getContext("2d");
+
+			context.fillStyle = "rgb(0,128,0)";
+			context.lineWidth = "1";
+			context.strokeStyle = "black";
+
+			for (var cy = 0; cy < y; cy++) {
+				for (var cx = 0; cx < x; cx++) {
+					context.fillRect(cx * width, cy * height, width, height);
+					context.strokeRect(cx * width, cy * height, width, height);
+					context.stroke();
+				}
+			}
+		}
+	</script>
+</body>
+</html>

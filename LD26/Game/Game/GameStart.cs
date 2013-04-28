@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Game.Models;
 using Microsoft.Xna.Framework;
@@ -21,8 +22,7 @@ using Rectangle = SquaredEngine.Graphics.Rectangle;
 
 namespace Game {
 	public class GameStart : Microsoft.Xna.Framework.Game {
-		// TODO Minimalism
-		// TODO Tower defense?
+		// Bug close destination
 
 		public GraphicsDeviceManager graphics;
 		public GraphicsDrawer drawer;
@@ -46,6 +46,13 @@ namespace Game {
 		public Vector3 menuOffset = new Vector3(-12.5f, -31, 0);
 		public float menuAngle = MathHelper.ToRadians(45f);
 		public int menuItems = 8;
+		public Texture2D machineGunLogo;
+		public Texture2D laserLogo;
+		public Texture2D shotGunLogo;
+		public Texture2D canonLogo;
+
+		public IDrawable minimapBackground;
+		public Vector3 minimapPosition;
 
 		public Map map;
 		public Position pointerPosition;
@@ -71,8 +78,10 @@ namespace Game {
 		}
 
 		protected override void Initialize() {
+#if DEBUG
 			this.timeDebuger = new TimeDebuger(this);
 			this.Components.Add(this.timeDebuger);
+#endif
 
 			this.keyboard = new KeyboardController(this);
 			this.Components.Add(this.keyboard);
@@ -82,15 +91,16 @@ namespace Game {
 
 			// TODO Limit camera view
 			this.camera = new Camera2D(this);
+			this.camera.Zoom = 0.5f;
 			this.Components.Add(this.camera);
 
 			this.map = new Map(this);
 			this.Components.Add(this.map);
-
+#if DEBUG
 			this.cameraDebugger = new CameraDebuger(
 				this, this.camera, this.map.mapRange * Map.MapGridSize);
 			this.Components.Add(this.cameraDebugger);
-
+#endif
 			base.Initialize();
 		}
 
@@ -100,14 +110,31 @@ namespace Game {
 			this.drawer.Initialize();
 			this.drawer.DebugFont = this.Content.Load<SpriteFont>("Fonts/DebugFont");
 
+#if DEBUG
 			this.timeDebuger.Position = new Vector3(0f,
 				GraphicsDevice.Viewport.Height - TimeDebuger.GraphHeight, 0f);
-
+#endif
 			// TODO Implement player name input
 			this.player = new Player() {
 				Name = "AleksandarDev",
 				Resources = StartResources
 			};
+
+			LaserTower.LaserBullet.effect =
+				this.Content.Load<SoundEffect>("SF/LaserBullet");
+			Bullet.effect =
+				this.Content.Load<SoundEffect>("SF/Bullet");
+
+			this.machineGunLogo = this.Content.Load<Texture2D>("Textures/MachineGun");
+			this.laserLogo = this.Content.Load<Texture2D>("Textures/Laser");
+			this.shotGunLogo = this.Content.Load<Texture2D>("Textures/ShotGun");
+			this.canonLogo = this.Content.Load<Texture2D>("Textures/Canon");
+
+			this.minimapPosition = new Vector3(
+				this.GraphicsDevice.Viewport.Width - 256,
+				this.GraphicsDevice.Viewport.Height - 256, 0);
+			this.minimapBackground = new Rectangle(
+				this.minimapPosition, 256, new Color(0, 0, 0, 128));
 		}
 
 		protected override void Update(GameTime gameTime) {
@@ -126,14 +153,33 @@ namespace Game {
 
 			var scrollDelta = this.currentMouseState.ScrollWheelValue -
 				this.previousMouseState.ScrollWheelValue;
+			float prevZoom = this.camera.Zoom;
+			
+			// Set zoom
 			if (this.keyboard.IsClicked(Keys.Add) || scrollDelta > 0)
 				this.camera.Zoom = Math.Min(zoomMax, this.camera.Zoom + 0.1f);
 			if (this.keyboard.IsClicked(Keys.Subtract) || scrollDelta < 0)
 				this.camera.Zoom = Math.Max(zoomMin, this.camera.Zoom - 0.1f);
 
+			// Correct origin of zoom
+			this.camera.Position = new Vector2(
+									this.camera.Position.X -
+									this.camera.ViewSize.X / this.camera.Zoom *
+									(1 - this.camera.Zoom / prevZoom) * (this.currentMouseState.X / (this.GraphicsDevice.Viewport.Width / 2f)),
+									this.camera.Position.Y -
+									this.camera.ViewSize.Y / this.camera.Zoom *
+									(1 - this.camera.Zoom / prevZoom) * (this.currentMouseState.Y / (this.GraphicsDevice.Viewport.Height / 2f)));
+
+			if (this.currentMouseState.LeftButton == ButtonState.Pressed &&
+				this.previousMouseState.LeftButton == ButtonState.Pressed) {
+				this.camera.Move(-new Vector2(this.currentMouseState.X - this.previousMouseState.X, this.currentMouseState.Y - this.previousMouseState.Y) / this.camera.Zoom);
+			}
+
 			// On mouse click
 			if (this.currentMouseState.LeftButton == ButtonState.Pressed &&
 				this.previousMouseState.LeftButton == ButtonState.Released) {
+
+				
 
 				// Check if build tower needs to be dropped
 				if (this.buildTower != null && !this.buildTower.IsDropped &&
@@ -165,9 +211,12 @@ namespace Game {
 				if (this.isMenuActive) {
 					this.isMenuActive = false;
 					// Build new tower
-					if (this.menuSelectedItemIndex == 0) {
-						this.buildTower = new StaticTower(this.map);
-					}
+					if (this.menuSelectedItemIndex == 0)
+						this.buildTower = new MachineGunTower(this.map);
+					else if (this.menuSelectedItemIndex == 1)
+						this.buildTower = new ShotGunTower(this.map);
+					else if (this.menuSelectedItemIndex == 5)
+						this.buildTower = new LaserTower(this.map);
 					// TODO Check released on menu
 				}
 			}
@@ -186,18 +235,7 @@ namespace Game {
 		}
 
 		protected override void Draw(GameTime gameTime) {
-			this.GraphicsDevice.Clear(Color.Black);
-
-			// Draw camera dependent elements
-			this.drawer.Begin(transformMatrix: this.camera.TransformMatrix);
-
-			// Draw game board
-			this.drawer.Draw(new Rectangle(Vector3.Zero,
-				new Vector3(this.map.mapRange.Width * Map.MapGridSize,
-					this.map.mapRange.Height * Map.MapGridSize, 0),
-				new Color(96, 196, 116)));
-
-			this.drawer.End();
+			this.GraphicsDevice.Clear(Color.BurlyWood);
 
 			base.Draw(gameTime);
 
@@ -207,8 +245,6 @@ namespace Game {
 			// Draw build tower
 			if (this.buildTower != null)
 				this.buildTower.Draw(this.drawer, this.timeController.Time);
-
-
 
 #if DEBUG
 			//DrawChildren(drawer, this.map.towersTree.RootNode);
@@ -225,6 +261,12 @@ namespace Game {
 			if (this.isMenuActive)
 				this.DrawMenu(drawer, this.timeController.Time);
 
+			drawer.Draw(this.minimapBackground);
+			foreach (var enemy in this.map.enemiesTree.GetAllComponents()) {
+				drawer.Draw(new Rectangle(enemy.Position * 4 + this.minimapPosition, 4,
+					enemy.Color));
+			}
+
 			this.drawer.End();
 		}
 
@@ -239,7 +281,8 @@ namespace Game {
 				points[2] = points[1] + new Vector3(this.menuTopSideSize, 0, 0);
 				points[3] = points[0] + new Vector3(this.menuBottomSideSize, 0, 0);
 
-				GraphicsDrawer.RotateAboutOrigin(currentOrigin, this.menuAngle * index, ref points);
+				GraphicsDrawer.RotateAboutOrigin(currentOrigin, this.menuAngle * index,
+					ref points);
 
 				this.drawer.Draw(new Quad(
 					points[0], points[1], points[2], points[3],
@@ -247,6 +290,33 @@ namespace Game {
 						? Color.Red
 						: new Color(0 + index * 30, 255 - index * 20, 200 - index * 50)));
 				currentOrigin = points[3];
+
+				// Draw canon logo
+				if (index == 0)
+					drawer.Draw(this.machineGunLogo,
+						points[1].ToVector2() +
+						new Vector2((this.menuTopSideSize - this.menuBottomSideSize) / 3.5f, 
+							this.menuItemHeight / 12), Color.White);
+				else if (index == 1)
+					drawer.Draw(this.shotGunLogo,
+						points[1].ToVector2() +
+						new Vector2(-(this.menuTopSideSize - this.menuBottomSideSize) / 5,
+							this.menuItemHeight / 2), Color.White);
+				else if (index == 2)
+					drawer.Draw(this.canonLogo,
+						points[3].ToVector2() +
+						new Vector2(-(this.menuTopSideSize - this.menuBottomSideSize) / 6,
+							this.menuItemHeight / 6), Color.White);
+				else if (index == 4)
+					drawer.Draw(this.canonLogo,
+						points[3].ToVector2() +
+						new Vector2(-(this.menuTopSideSize - this.menuBottomSideSize) / 6,
+							this.menuItemHeight / 6), Color.White);
+				else if (index == 5)
+					drawer.Draw(this.laserLogo,
+						points[2].ToVector2() +
+						new Vector2((this.menuTopSideSize - this.menuBottomSideSize) / 3,
+							-this.menuItemHeight / 4), Color.White);
 			}
 
 

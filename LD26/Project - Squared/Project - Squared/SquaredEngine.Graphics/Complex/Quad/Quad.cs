@@ -15,16 +15,19 @@ namespace SquaredEngine.Graphics {
 		}
 
 
-		public Quad(Vector3 pointA, Vector3 pointB, Vector3 pointC, Vector3 pointD, Color color)
-			: this(pointA, pointB, pointC, pointD, color, color, color, color) {
+		public Quad(Vector3 pointA, Vector3 pointB, Vector3 pointC, Vector3 pointD, Color color, float angle = 0f, Vector3? origin = null)
+			: this(pointA, pointB, pointC, pointD, color, color, color, color, angle, origin) {
 		}
 
 		public Quad(Vector3 pointA, Vector3 pointB, Vector3 pointC, Vector3 pointD, Color colorA, Color colorB, Color colorC,
-		            Color colorD)
+		            Color colorD, float angle = 0f, Vector3? origin = null)
 			: this() {
+			Vector3[] points = {pointA, pointB, pointC, pointD};
+			if (origin.HasValue && angle != 0f)
+				GraphicsDrawer.RotateAboutOrigin(origin.Value, angle, ref points);
 			this.primitives = new IPrimitive[2] {
-			                                    	new GraphicsDrawer.Triangle(pointA, pointB, pointD, colorA, colorB, colorD),
-			                                    	new GraphicsDrawer.Triangle(pointB, pointC, pointD, colorB, colorC, colorD)
+			                                    	new GraphicsDrawer.Triangle(points[0], points[1], points[3], colorA, colorB, colorD),
+			                                    	new GraphicsDrawer.Triangle(points[1], points[2], points[3], colorB, colorC, colorD)
 			                                    };
 		}
 

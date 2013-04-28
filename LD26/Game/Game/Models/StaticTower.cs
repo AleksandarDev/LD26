@@ -26,6 +26,9 @@ using Rectangle = SquaredEngine.Graphics.Rectangle;
 
 
 namespace Game.Models {
+	// Shutgun
+	// Canon / explosion
+
 	public class PathNode :
 		PathFinder.PathFinder<PathNode>.IHasNeighbours<PathNode> {
 		public readonly Map Map;
@@ -46,7 +49,7 @@ namespace Game.Models {
 		public IEnumerable<PathNode> GetSuccessors() {
 			for (int y = -1; y < 2; y++) {
 				for (int x = -1; x < 2; x++) {
-					if ((y == 0 && x == 0) || y + this.Y < 0 || x + this.X < 0)
+					if (Math.Abs(x) == Math.Abs(y) || (y == 0 && x == 0) || y + this.Y < 0 || x + this.X < 0)
 						continue;
 					if (Parent != null && (this.Y + y == Parent.Y && this.X + x == Parent.X))
 						continue;
@@ -54,7 +57,6 @@ namespace Game.Models {
 						this.Map.towersTree.GetComponents(new Position(this.X + x, this.Y + y))
 							.Any())
 						continue;
-					// TODO Check if not blocked
 
 					yield return new PathNode(this.Map, this, this.X + x, this.Y + y);
 				}
@@ -136,7 +138,7 @@ namespace Game.Models {
 			this.movePath = new Stack<PathNode>();
 			this.IsFindingPath = true;
 
-			this.HealthMax = 150.0;
+			this.HealthMax = 300.0;
 			this.HealthCurrent = this.HealthMax;
 
 			this.barOffset = new Vector3(-Map.MapGridSizeOver2, -Map.MapGridSizeOver2 - 10, 0);
@@ -157,8 +159,10 @@ namespace Game.Models {
 					if (this.movePath.Count > 0) {
 						this.currentPathNode = this.movePath.Pop();
 					}
-					else this.HasReachedDestination = true;
-					// TODO else reached destination
+					else {
+						this.Map.enemiesTree.RemoveComponent(this, false);
+						this.Map.EnemiesPassed.Add(this);
+					}
 				}
 
 				// Move toward next destination
@@ -271,13 +275,18 @@ namespace Game.Models {
 			drawer.Draw(this.hpBarOverlay);
 
 #if DEBUG
-			foreach (var pathNode in this.movePath) {
-				if (pathNode != null && pathNode.Parent != null)
-					drawer.Draw(new GraphicsDrawer.Line(
-						new Vector3(pathNode.Parent.X, pathNode.Parent.Y, 0) * Map.MapGridSize +
-						new Vector3(Map.MapGridSizeOver2, Map.MapGridSizeOver2, 0),
-						new Vector3(pathNode.X, pathNode.Y, 0) * Map.MapGridSize +
-						new Vector3(Map.MapGridSizeOver2, Map.MapGridSizeOver2, 0), Color.White));
+			try {
+				foreach (var pathNode in this.movePath) {
+					if (pathNode != null && pathNode.Parent != null)
+						drawer.Draw(new GraphicsDrawer.Line(
+							new Vector3(pathNode.Parent.X, pathNode.Parent.Y, 0) * Map.MapGridSize +
+							new Vector3(Map.MapGridSizeOver2, Map.MapGridSizeOver2, 0),
+							new Vector3(pathNode.X, pathNode.Y, 0) * Map.MapGridSize +
+							new Vector3(Map.MapGridSizeOver2, Map.MapGridSizeOver2, 0), Color.White));
+				}
+			}
+			catch (Exception) {
+				System.Diagnostics.Debug.WriteLine("Can't draw path");
 			}
 #endif
 		}
@@ -291,7 +300,275 @@ namespace Game.Models {
 		}
 	}
 
-	public class StaticTower : IComponent {
+	public class LaserTower : StaticTower {
+		public class LaserBullet : Bullet {
+			public static new SoundEffect effect;
+			public float Angle;
+			private Vector3 positionDROffset = new Vector3(30, 5, 0);
+
+
+			public LaserBullet() {
+				this.Color = Color.Yellow;
+			}
+
+			public override void Update(Time time) {
+				this.Angle = (float)(Constants.PIOver2 - Math.Atan2(
+					this.Destination.X - this.StartPosition.X,
+					this.Destination.Y - this.StartPosition.Y));
+
+				base.Update(time);
+			}
+
+
+			public override void Draw(GraphicsDrawer drawer, Time time) {
+				if (this.IsAlive) {
+					Vector3 position = this.StartPosition +
+						(this.Destination - this.StartPosition) * this.Progress;
+					Vector3 positionDR = position + this.positionDROffset;
+					drawer.Draw(new Rectangle(
+							position, positionDR,
+							this.Color, this.Angle, position));
+				}
+			}
+		}
+
+		public List<LaserBullet> Bullets;
+
+
+		public LaserTower(Map map)
+			: base(map)
+		{
+			this.FireRateDelay = 500;
+			this.Damage = 50;
+			this.Range = 10;
+			this.SafeRange = 7;
+			this.FireDamageDelay = 70;
+
+			this.Bullets = new List<LaserBullet>();
+		}
+
+
+		public override void Update(Time time) {
+			base.Update(time);
+
+			if (this.IsFiring) {
+				if (this.FireDamageDelayCurrent == this.FireDamageDelay) {
+					Random random = new Random();
+					float randomnesMul = 1f - (float)(this.FiringOnDistance / this.Range);
+					LaserTower.LaserBullet.effect.Play(0.5f, 0, 0);
+					this.Bullets.Add(new LaserBullet() {
+						StartPosition = this.AbsoutePosition,
+						Destination = this.FiringOn.AbsoutePosition + new Vector3((float)random.NextDouble(), (float)random.NextDouble(), 0) * randomnesMul * Map.MapGridSize,
+						TotalTime = this.FireDamageDelay
+					});
+				}
+			}
+
+			foreach (var bullet in this.Bullets) {
+				bullet.Update(time);
+			}
+
+			this.Bullets.RemoveAll(b => !b.IsAlive);
+		}
+
+
+		public override void Draw(GraphicsDrawer drawer, Time time) {
+			base.Draw(drawer, time);
+
+			if (this.IsFiring) {
+				foreach (var bullet in this.Bullets) {
+					bullet.Draw(drawer, time);		
+				}
+			}
+#if DEBUG
+			if (this.FiringOn != null) {
+				drawer.Draw(new RectangleOutline(
+					this.FiringOn.AbsoutePosition +
+					new Vector3(-Map.MapGridSizeOver2, -Map.MapGridSizeOver2, 0),
+					Map.MapGridSize, Color.Red));
+				drawer.Draw(new GraphicsDrawer.Line(this.AbsoutePosition,
+					this.FiringOn.AbsoutePosition, Color.Red));
+			}
+#endif
+		}
+	}
+
+	public class MachineGunTower : StaticTower {
+		public List<Bullet> Bullets; 
+
+
+		public MachineGunTower(Map map) : base(map) {
+			this.FireRateDelay = 100;
+			this.Damage = 10;
+			this.Range = 5;
+			this.SafeRange = 2;
+			this.FireDamageDelay = 100;
+
+			this.Bullets = new List<Bullet>();
+		}
+
+
+		public override void Update(Time time) {
+			base.Update(time);
+
+			if (this.IsFiring) {
+				if (this.FireDamageDelayCurrent == this.FireDamageDelay) {
+					Random random = new Random();
+					float randomnesMul = 1f - (float)(this.FiringOnDistance / this.Range);
+					Bullet.effect.Play(0.5f, 0, 0);
+					this.Bullets.Add(new Bullet() {
+						StartPosition = this.AbsoutePosition,
+						Destination = this.FiringOn.AbsoutePosition + new Vector3((float)random.NextDouble(), (float)random.NextDouble(), 0) * randomnesMul * Map.MapGridSize,
+						TotalTime = this.FireDamageDelay,
+						Color = Color.White,
+						Size = 5f
+					});
+				}
+			}
+
+			foreach (var bullet in this.Bullets) {
+				bullet.Update(time);
+			}
+
+			this.Bullets.RemoveAll(b => !b.IsAlive);
+		}
+
+
+		public override void Draw(GraphicsDrawer drawer, Time time) {
+			base.Draw(drawer, time);
+
+			if (this.IsFiring) {
+				foreach (var bullet in this.Bullets) {
+					bullet.Draw(drawer, time);		
+				}
+			}
+#if DEBUG
+			if (this.FiringOn != null) {
+				drawer.Draw(new RectangleOutline(
+					this.FiringOn.AbsoutePosition +
+					new Vector3(-Map.MapGridSizeOver2, -Map.MapGridSizeOver2, 0),
+					Map.MapGridSize, Color.Red));
+				drawer.Draw(new GraphicsDrawer.Line(this.AbsoutePosition,
+					this.FiringOn.AbsoutePosition, Color.Red));
+			}
+#endif
+		}
+	}
+
+	public class ShotGunTower : StaticTower
+	{
+		public List<Bullet> Bullets;
+
+
+		public ShotGunTower(Map map)
+			: base(map)
+		{
+			this.FireRateDelay = 700;
+			this.Damage = 180;
+			this.Range = 4;
+			this.SafeRange = 1;
+			this.FireDamageDelay = 100;
+
+			this.Bullets = new List<Bullet>();
+		}
+
+
+		public override void Update(Time time)
+		{
+			base.Update(time);
+
+			if (this.IsFiring)
+			{
+				if (this.FireDamageDelayCurrent == this.FireDamageDelay)
+				{
+					Random random = new Random();
+					float randomnesMul = (float)(this.FiringOnDistance / this.Range) * 2f;
+					Bullet.effect.Play(0.5f, 0, 0);
+					for (int index = 0; index < 10; index++) {
+						this.Bullets.Add(new Bullet()
+						{
+							StartPosition = this.AbsoutePosition,
+							Destination = this.FiringOn.AbsoutePosition + new Vector3((float)random.NextDouble() * Map.MapGridSize * randomnesMul - Map.MapGridSizeOver2, (float)random.NextDouble() * Map.MapGridSize * randomnesMul - Map.MapGridSizeOver2, 0),
+							TotalTime = this.FireDamageDelay,
+							Color = Color.White,
+							Size = 2f
+						});	
+					}
+				}
+			}
+
+			foreach (var bullet in this.Bullets)
+			{
+				bullet.Update(time);
+			}
+
+			this.Bullets.RemoveAll(b => !b.IsAlive);
+		}
+
+
+		public override void Draw(GraphicsDrawer drawer, Time time)
+		{
+			base.Draw(drawer, time);
+
+			if (this.IsFiring)
+			{
+				foreach (var bullet in this.Bullets)
+				{
+					bullet.Draw(drawer, time);
+				}
+			}
+#if DEBUG
+			if (this.FiringOn != null)
+			{
+				drawer.Draw(new RectangleOutline(
+					this.FiringOn.AbsoutePosition +
+					new Vector3(-Map.MapGridSizeOver2, -Map.MapGridSizeOver2, 0),
+					Map.MapGridSize, Color.Red));
+				drawer.Draw(new GraphicsDrawer.Line(this.AbsoutePosition,
+					this.FiringOn.AbsoutePosition, Color.Red));
+			}
+#endif
+		}
+	}
+
+
+	public class Bullet {
+		public static SoundEffect effect;
+
+		public bool IsAlive;
+		public Vector3 StartPosition;
+		public Vector3 Destination;
+		public float Progress;
+		public double TotalTime;
+		public double CurrentTime;
+		public float Size;
+		public Color Color;
+
+		public Bullet() {
+			this.IsAlive = true;
+		}
+
+		public virtual void Update(Time time) {
+			if (this.IsAlive) {
+				this.CurrentTime += time.Delta * 1000;
+				this.Progress = (float) (CurrentTime / TotalTime);
+
+				if (this.Progress >= 1) this.IsAlive = false;
+			}
+		}
+
+		public virtual void Draw(GraphicsDrawer drawer, Time time) {
+			if (this.IsAlive) {
+				drawer.Draw(
+					new Rectangle(
+						this.StartPosition +
+						(this.Destination - this.StartPosition) * this.Progress, this.Size,
+						this.Color));
+			}
+		}
+	}
+
+	public abstract class StaticTower : IComponent {
 		public const float TowerSize = Map.MapGridSizeOver2;
 		public const float TowerSizeD = TowerSize * 2f;
 
@@ -317,6 +594,11 @@ namespace Game.Models {
 		public double Damage;
 		public double FireRateDelay;
 		public double FireReadyNext;
+		public Enemy FiringOn;
+		public double FiringOnDistance;
+		public bool IsFiring;
+		public double FireDamageDelay;
+		public double FireDamageDelayCurrent;
 
 		// Draw
 		public Vector3 AbsoutePosition;
@@ -329,33 +611,48 @@ namespace Game.Models {
 
 			this.Range = 10;
 			this.SafeRange = 4;
-			this.Damage = 20;
-			this.FireRateDelay = 100;
+			this.Damage = 200;
+			this.FireRateDelay = 1000;
+			this.FireDamageDelay = 0;
 
 			this.Rebuild();
 		}
 
 
-		public void Update(Time time) {
+		public virtual void Update(Time time) {
+			if (this.IsFiring)
+			{
+				// Do damage after delay
+				this.FireDamageDelayCurrent -= time.Delta * 1000;
+				if (this.FireDamageDelayCurrent <= 0)
+				{
+					this.IsFiring = false;
+					if (this.FiringOnDistance <= this.SafeRange)
+						this.FiringOn.DoDamage(this.Damage);
+					else
+						this.FiringOn.DoDamage(this.Damage *
+							(1 - (this.FiringOnDistance / this.Range)));
+				}
+			}
+
 			if (this.FireReadyNext > 0)
 				this.FireReadyNext -= time.Delta * 1000;
 			else {
 				this.FireReadyNext = 0;
 				var enemiesInRange = this.Map.enemiesTree.GetAllComponents();
-				double minDistance = Double.MaxValue;
-				Enemy closestEnemy = null;
+				this.FiringOnDistance = Double.MaxValue;
+				this.FiringOn = null;
 				foreach (var enemy in enemiesInRange) {
 					var distance = Position.Distance((Position) enemy.Position, this.Position);
-					if (distance <= this.Range && distance < minDistance) {
-						minDistance = distance;
-						closestEnemy = enemy;
+					if (distance <= this.Range && distance < this.FiringOnDistance) {
+						this.FiringOnDistance = distance;
+						this.FiringOn = enemy;
 					}
 				}
-				if (closestEnemy != null) {
-					if (minDistance <= this.SafeRange)
-						closestEnemy.DoDamage(this.Damage);
-					else closestEnemy.DoDamage(this.Damage * (1 - (minDistance / this.Range)));
+				if (this.FiringOn != null) {
+					this.FireDamageDelayCurrent = this.FireDamageDelay;
 					this.FireReadyNext = this.FireRateDelay;
+					this.IsFiring = true;
 				}
 			}
 		}
@@ -377,7 +674,7 @@ namespace Game.Models {
 				this.AbsoutePosition, TowerSize, TowerSize, this.Color);
 		}
 
-		public void Draw(GraphicsDrawer drawer, Time time) {
+		public virtual void Draw(GraphicsDrawer drawer, Time time) {
 			if (this.drawable == null) this.Rebuild();
 
 #if DEBUG

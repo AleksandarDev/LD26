@@ -53,7 +53,7 @@ namespace SquaredEngine.Utils.Trees.QuadTree {
 			this.range = nodeRange;
 
 
-			System.Diagnostics.Debug.WriteLine(String.Format("{0}Node created {1}", IsRootNode ? "Root" : String.Empty, Range));
+			//System.Diagnostics.Debug.WriteLine(String.Format("{0}Node created {1}", IsRootNode ? "Root" : String.Empty, Range));
 		}
 
 
@@ -109,8 +109,8 @@ namespace SquaredEngine.Utils.Trees.QuadTree {
 					});
 				}
 
-				System.Diagnostics.Debug.WriteLine(
-					String.Format("Component added to node {0}", Range));
+				//System.Diagnostics.Debug.WriteLine(
+				//    String.Format("Component added to node {0}", Range));
 			}
 
 			// Provjerava da li je granica komponenti prijedena te da li nije trenutni cvor krajnji cvor

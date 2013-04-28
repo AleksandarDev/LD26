@@ -18,7 +18,7 @@ namespace SquaredEngine.Graphics {
 		public event Camera2DEventHandler OnMoveEnded;
 
 		private KeyboardController keyboardController;
-		private Vector3 position = Vector3.One;
+		private Vector3 position = Vector3.Zero;
 		private float speed = 1000f;
 		private int speedMult = 1;
 		private Matrix transformMatrix;
@@ -107,7 +107,7 @@ namespace SquaredEngine.Graphics {
 
 				var deltaTime = (float) gameTime.ElapsedGameTime.TotalSeconds;
 
-				speedMult = keyboardController.IsHeld(Keys.LeftShift) ? 10 : 1;
+				speedMult = keyboardController.IsHeld(Keys.LeftShift) ? 2 : 1;
 
 				Vector3 direction = Vector3.Zero;
 

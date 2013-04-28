@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
+using Microsoft.Xna.Framework;
 
 
 namespace SquaredEngine.Common {
@@ -104,6 +106,10 @@ namespace SquaredEngine.Common {
 
 		public static bool operator !=(Range a, Range b) {
 			return !a.Equals(b);
+		}
+
+		public static implicit operator Microsoft.Xna.Framework.Rectangle(Range a) {
+			return new Rectangle(a.upperLeft.X, a.upperLeft.Y, a.Width, a.Height);
 		}
 
 		public override bool Equals(object obj) {

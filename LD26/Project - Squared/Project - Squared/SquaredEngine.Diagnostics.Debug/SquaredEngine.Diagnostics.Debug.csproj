@@ -16,10 +16,14 @@
     <XnaProfile>Reach</XnaProfile>
     <XnaCrossPlatformGroupID>24329229-9ba1-4f8b-bfde-ae59d5bd9a31</XnaCrossPlatformGroupID>
     <XnaOutputType>Library</XnaOutputType>
-    <SccProjectName>SAK</SccProjectName>
-    <SccLocalPath>SAK</SccLocalPath>
-    <SccAuxPath>SAK</SccAuxPath>
-    <SccProvider>SAK</SccProvider>
+    <SccProjectName>
+    </SccProjectName>
+    <SccLocalPath>
+    </SccLocalPath>
+    <SccAuxPath>
+    </SccAuxPath>
+    <SccProvider>
+    </SccProvider>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <DebugSymbols>true</DebugSymbols>

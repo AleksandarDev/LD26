@@ -37,9 +37,11 @@ namespace SquaredEngine.Utils.Trees.QuadTree {
 
 		void Initialize();
 		
-		void AddComponent(K component);
+		void AddComponent(K component, bool checkTreshold = true);
 
-		void RemoveComponent(K component);
+		void UpdateComponent(K component);
+
+		bool RemoveComponent(K component, bool checkDirection);
 		void RemoveComponent(int componentKey);
 		void RemoveComponents(IEnumerable<K> components);
 		void RemoveComponents(int nodeIndex);
@@ -47,6 +49,7 @@ namespace SquaredEngine.Utils.Trees.QuadTree {
 		bool CheckChildrenComponents(bool clearIfEmpty = true);
 
 		IEnumerable<K> GetComponents();
+		IEnumerable<K> GetComponents(Position position);
 		IEnumerable<K> GetAllComponents();
 	
 		void Clear(bool clearAll = false);

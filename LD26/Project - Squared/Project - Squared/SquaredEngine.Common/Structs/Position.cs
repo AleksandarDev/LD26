@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.Remoting.Messaging;
 
 
 namespace SquaredEngine.Common {
@@ -136,6 +137,10 @@ namespace SquaredEngine.Common {
 			return new Position((int)a.X, (int)a.Y);
 		}
 
+		public static implicit operator PositionF(Position a) {
+			return new PositionF(a.x, a.y);
+		}
+
 		#endregion
 
 		/// <summary>
@@ -183,6 +188,21 @@ namespace SquaredEngine.Common {
 		private void UpdateToString() {
 			// Format: {X:{0} Y:{1}}
 			this.toString = "{X:" + this.x + " Y:" + this.y + "}";
+		}
+
+		public static Position Clamp(Position value, Position min, Position max) {
+			Position newValue = value;
+			if (newValue.x > max.x) newValue.x = max.x;
+			else if (newValue.x < min.x) newValue.x = min.x;
+
+			if (newValue.y > max.y) newValue.y = max.y;
+			else if (newValue.y < min.y) newValue.y = min.y;
+
+			return newValue;
+		}
+
+		public static double Distance(Position a, Position b) {
+			return Math.Sqrt(Math.Pow(a.x - b.x, 2) + Math.Pow(a.y - b.y, 2));
 		}
 	}
 }

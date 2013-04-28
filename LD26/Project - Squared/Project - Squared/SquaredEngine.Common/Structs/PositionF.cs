@@ -1,4 +1,5 @@
 ﻿using System;
+using Microsoft.Xna.Framework;
 
 
 namespace SquaredEngine.Common {
@@ -98,6 +99,10 @@ namespace SquaredEngine.Common {
 			return new PositionF(a.X / b.X, a.Y / b.Y);
 		}
 
+		public static PositionF operator +(PositionF a, Vector3 b) {
+			return new PositionF(a.x + b.X, a.y + b.Y);
+		}
+
 		public static explicit operator Microsoft.Xna.Framework.Point(PositionF a) {
 			return new Microsoft.Xna.Framework.Point((int)a.X, (int)a.Y);
 		}
@@ -120,6 +125,10 @@ namespace SquaredEngine.Common {
 
 		public static implicit operator PositionF(Microsoft.Xna.Framework.Vector3 a) {
 			return new PositionF(a.X, a.Y);
+		}
+
+		public static explicit operator Position(PositionF a) {
+			return new Position((int)a.x, (int)a.y);
 		}
 
 		#endregion

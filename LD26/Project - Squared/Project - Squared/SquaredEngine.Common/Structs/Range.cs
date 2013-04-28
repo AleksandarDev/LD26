@@ -93,6 +93,11 @@ namespace SquaredEngine.Common {
 			throw new NotImplementedException();
 		}
 
+		public static Range operator *(Range a, int mul) {
+			return new Range(new Position(a.upperLeft.X * mul, a.upperLeft.Y * mul),
+				new Position(a.lowerRight.X * mul, a.lowerRight.Y * mul));
+		}
+
 		public static bool operator ==(Range a, Range b) {
 			return a.Equals(b);
 		}

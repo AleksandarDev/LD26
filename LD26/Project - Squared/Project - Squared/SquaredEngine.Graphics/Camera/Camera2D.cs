@@ -35,7 +35,7 @@ namespace SquaredEngine.Graphics {
 
 		public float Zoom {
 			get { return zoom; }
-			set { if (zoom >= 0) zoom = value; }
+			set { if (zoom >= 0) zoom = value; RecalculateParameters(); }
 		}
 
 		public Vector2 Position {

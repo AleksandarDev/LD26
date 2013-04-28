@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Game", "Game\Game\Game.csproj", "{88951F2F-B529-4453-85C3-26694E5F97BA}"
 EndProject
-Project("{96E2B04D-8817-42C6-938A-82C39BA4D311}") = "GameContent", "Game\GameContent\GameContent.contentproj", "{D9396A02-08AC-4BF5-AD4D-E162433DEF7B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameContent", "Game\GameContent\GameContent.contentproj", "{D9396A02-08AC-4BF5-AD4D-E162433DEF7B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SquaredEngine.Graphics", "Project - Squared\Project - Squared\SquaredEngine.Graphics\SquaredEngine.Graphics.csproj", "{53F9D28B-BF3D-4202-8988-8A500399B6FF}"
 EndProject

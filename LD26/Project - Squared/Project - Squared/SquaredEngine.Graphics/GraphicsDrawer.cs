@@ -417,6 +417,21 @@ namespace SquaredEngine.Graphics {
 			}
 		}
 
+		public static void RotateAboutOrigin(Vector3 origin, float angle, ref Vector3[] points)
+		{
+			Vector2 transformVector;
+			Vector2 result;
+			for (int i = 0; i < points.Length; i++)
+			{
+				transformVector.X = points[i].X - origin.X;
+				transformVector.Y = points[i].Y - origin.Y;
+				var transform = Matrix.CreateRotationZ(angle);
+				Vector2.Transform(ref transformVector, ref transform, out result);
+				points[i].X = result.X + origin.X;
+				points[i].Y = result.Y + origin.Y;
+			}
+		}
+
 		// TODO: Rotacija
 		// NOTE: Rotacije i pomicanje objekata: http://forums.create.msdn.com/forums/t/7414.aspx?PageIndex=2
 		// NOTE: Krug i elips: http://forums.create.msdn.com/forums/t/7414.aspx

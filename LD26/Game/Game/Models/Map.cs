@@ -73,7 +73,7 @@ namespace Game.Models
 		public override void Update(GameTime gameTime) {
 			base.Update(gameTime);
 
-			if (Enemy.CurrentLevel / 25 == this.enemySpawns.Count) {
+			if (Enemy.CurrentLevel / 25 * (this.enemySpawns.Count + 1) == this.enemySpawns.Count) {
 				Map.newSpawnSF.Play(0.5f, 0, 0);
 				Random random = new Random();
 				Position position;

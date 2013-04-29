@@ -96,7 +96,7 @@ namespace Game {
 			this.timeController = new TimeController(this, true);
 			this.Components.Add(this.timeController);
 #if DEBUG
-			this.timeController.TimeStep = 4f;
+			this.timeController.TimeStep = 10f;
 #endif
 
 			// TODO Limit camera view

@@ -4,10 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using SquaredEngine.Common;
 using SquaredEngine.Graphics;
 using SquaredEngine.Utils.Trees.QuadTree;
+using Rectangle = Microsoft.Xna.Framework.Rectangle;
 
 namespace Game.Models
 {
@@ -24,7 +26,11 @@ namespace Game.Models
 		public Node<StaticTower> towersTree;
 		public Node<Enemy> enemiesTree; 
 		public List<Position> checkForCollision;
-		public List<Enemy> EnemiesPassed; 
+		public List<Enemy> EnemiesPassed;
+
+		public static SoundEffect newSpawnSF;
+		public List<Position> enemySpawns;
+		public Position protectBlock;
 
 
 		public Map(GameStart game) : base(game) {
@@ -36,10 +42,24 @@ namespace Game.Models
 			base.LoadContent();
 
 			this.mapRange = new Range(Map.MapSize, Map.MapSize);
+			Random random = new Random();
+			this.protectBlock = new Position(random.Next(Map.MapSize - 20) + 10,
+				random.Next(Map.MapSize - 20) + 10);
+
+			this.Game.camera.Position =
+				new Vector2(
+					this.protectBlock.X * Map.MapSize -
+					(this.GraphicsDevice.Viewport.Width / 2f + Map.MapGridSizeOver2) /
+					this.Game.camera.Zoom
+					,
+					this.protectBlock.Y * Map.MapSize -
+					(this.GraphicsDevice.Viewport.Height / 2f + Map.MapGridSizeOver2) /
+					this.Game.camera.Zoom);
 
 			this.EnemiesPassed = new List<Enemy>();
 			this.enemiesTree = new Node<Enemy>(null, this.mapRange, 1, 10);
 			this.enemiesTree.Initialize();
+			this.enemySpawns = new List<Position>();
 
 			this.checkForCollision = new List<Position>();
 			this.towersTree = new Node<StaticTower>(null, this.mapRange, 1, 1);
@@ -53,6 +73,17 @@ namespace Game.Models
 		public override void Update(GameTime gameTime) {
 			base.Update(gameTime);
 
+			if (Enemy.CurrentLevel / 25 == this.enemySpawns.Count) {
+				Map.newSpawnSF.Play(0.5f, 0, 0);
+				Random random = new Random();
+				Position position;
+				do {
+					position = new Position(random.Next(Map.MapSize - 10) + 5,
+						random.Next(Map.MapSize - 10) + 5);
+				} while (Position.Distance(position, protectBlock) < 10);
+				this.enemySpawns.Add(position);
+			}
+
 			// Change path on collision
 			foreach (var position in this.checkForCollision) {
 				foreach (var enemy in this.enemiesTree.RootNode.GetAllComponents()) {
@@ -64,15 +95,14 @@ namespace Game.Models
 			this.checkForCollision.Clear();
 
 			// Create random enemies
-			if (counter++ % 60 == 0) {
-				Random random = new Random();
-				var newenemy = new Enemy(this);
-				newenemy.Position = new PositionF(63, 63);
-				//newenemy.Position = new Vector3(random.Next(Map.MapSize),
-				//    random.Next(Map.MapSize), 0);
-				newenemy.Destination = new Position(0, 0);
-				newenemy.Rebuild();
-				this.enemiesTree.AddComponent(newenemy);
+			if (counter++ / Math.Max(60, 200-Enemy.CurrentLevel) > 0) {
+				counter = 0;
+				for (int index = 0; index < this.enemySpawns.Count; index++) {
+					this.enemiesTree.AddComponent(new Enemy(this) {
+						Position = enemySpawns[index],
+						Destination = this.protectBlock
+					});
+				}
 			}
 
 			// Update enemies
@@ -85,6 +115,7 @@ namespace Game.Models
 			}
 
 			foreach (var enemy in this.EnemiesPassed) {
+				this.Game.GameOver();
 				enemy.Kill();
 			}
 		}
@@ -102,6 +133,15 @@ namespace Game.Models
 			this.Game.drawer.End();
 
 			this.Game.drawer.Begin(transformMatrix: this.Game.camera.TransformMatrix);
+
+			this.Game.drawer.Draw(
+				new SquaredEngine.Graphics.Rectangle(this.protectBlock * Map.MapGridSize,
+					Map.MapGridSize, Color.Red));
+			foreach (var enemySpawn in enemySpawns) {
+				this.Game.drawer.Draw(
+				new SquaredEngine.Graphics.Rectangle(enemySpawn * Map.MapGridSize,
+					Map.MapGridSize, Color.Green));
+			}
 
 			// Draw all towers
 			foreach (var tower in this.towersTree.RootNode.GetAllComponents())

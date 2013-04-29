@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -52,13 +53,19 @@ namespace Game {
 		public Texture2D canonLogo;
 
 		public IDrawable minimapBackground;
+		public List<IDrawable> minimapTowers; 
 		public Vector3 minimapPosition;
 
 		public Map map;
 		public Position pointerPosition;
 
+		private bool isGameOver;
+		private Texture2D potatoTexture;
+		private SpriteFont gameOverFont;
+
 		public Player player;
 		public const int StartResources = 2000;
+		private SpriteFont scoreFont;
 
 		public StaticTower buildTower;
 
@@ -88,6 +95,9 @@ namespace Game {
 
 			this.timeController = new TimeController(this, true);
 			this.Components.Add(this.timeController);
+#if DEBUG
+			this.timeController.TimeStep = 4f;
+#endif
 
 			// TODO Limit camera view
 			this.camera = new Camera2D(this);
@@ -116,121 +126,141 @@ namespace Game {
 #endif
 			// TODO Implement player name input
 			this.player = new Player() {
-				Name = "AleksandarDev",
+				Name = "Player 1",
 				Resources = StartResources
 			};
+
+			this.gameOverFont = this.Content.Load<SpriteFont>("Fonts/GameOver");
+			this.scoreFont = this.Content.Load<SpriteFont>("Fonts/Score");
 
 			LaserTower.LaserBullet.effect =
 				this.Content.Load<SoundEffect>("SF/LaserBullet");
 			Bullet.effect =
 				this.Content.Load<SoundEffect>("SF/Bullet");
+			ShotGunTower.effect =
+				this.Content.Load<SoundEffect>("SF/Shotgun");
+			Map.newSpawnSF =
+				this.Content.Load<SoundEffect>("SF/NewSpawn");
 
 			this.machineGunLogo = this.Content.Load<Texture2D>("Textures/MachineGun");
 			this.laserLogo = this.Content.Load<Texture2D>("Textures/Laser");
 			this.shotGunLogo = this.Content.Load<Texture2D>("Textures/ShotGun");
 			this.canonLogo = this.Content.Load<Texture2D>("Textures/Canon");
+			this.potatoTexture = this.Content.Load<Texture2D>("Textures/potato");
 
+			this.minimapTowers = new List<IDrawable>();
 			this.minimapPosition = new Vector3(
 				this.GraphicsDevice.Viewport.Width - 256,
 				this.GraphicsDevice.Viewport.Height - 256, 0);
 			this.minimapBackground = new Rectangle(
 				this.minimapPosition, 256, new Color(0, 0, 0, 128));
+
+			MediaPlayer.Play(this.Content.Load<Song>("Music/Background"));
+			MediaPlayer.IsRepeating = true;
+			MediaPlayer.Volume = 0.5f;
 		}
 
 		protected override void Update(GameTime gameTime) {
-			base.Update(gameTime);
+			if (!this.isGameOver) {
+				base.Update(gameTime);
 
-			this.previousMouseState = this.currentMouseState;
-			this.currentMouseState = Mouse.GetState();
+				this.previousMouseState = this.currentMouseState;
+				this.currentMouseState = Mouse.GetState();
 
-			this.pointerPosition = new Position(
-				(int)
-					((this.currentMouseState.X / this.camera.Zoom + this.camera.Position.X) /
-						Map.MapGridSize),
-				(int)
-					((this.currentMouseState.Y / this.camera.Zoom + this.camera.Position.Y) /
-						Map.MapGridSize));
+				this.pointerPosition = new Position(
+					(int)
+						((this.currentMouseState.X / this.camera.Zoom + this.camera.Position.X) /
+							Map.MapGridSize),
+					(int)
+						((this.currentMouseState.Y / this.camera.Zoom + this.camera.Position.Y) /
+							Map.MapGridSize));
 
-			var scrollDelta = this.currentMouseState.ScrollWheelValue -
-				this.previousMouseState.ScrollWheelValue;
-			float prevZoom = this.camera.Zoom;
-			
-			// Set zoom
-			if (this.keyboard.IsClicked(Keys.Add) || scrollDelta > 0)
-				this.camera.Zoom = Math.Min(zoomMax, this.camera.Zoom + 0.1f);
-			if (this.keyboard.IsClicked(Keys.Subtract) || scrollDelta < 0)
-				this.camera.Zoom = Math.Max(zoomMin, this.camera.Zoom - 0.1f);
+				var scrollDelta = this.currentMouseState.ScrollWheelValue -
+					this.previousMouseState.ScrollWheelValue;
+				float prevZoom = this.camera.Zoom;
 
-			// Correct origin of zoom
-			this.camera.Position = new Vector2(
-									this.camera.Position.X -
-									this.camera.ViewSize.X / this.camera.Zoom *
-									(1 - this.camera.Zoom / prevZoom) * (this.currentMouseState.X / (this.GraphicsDevice.Viewport.Width / 2f)),
-									this.camera.Position.Y -
-									this.camera.ViewSize.Y / this.camera.Zoom *
-									(1 - this.camera.Zoom / prevZoom) * (this.currentMouseState.Y / (this.GraphicsDevice.Viewport.Height / 2f)));
+				// Set zoom
+				if (this.keyboard.IsClicked(Keys.Add) || scrollDelta > 0)
+					this.camera.Zoom = Math.Min(zoomMax, this.camera.Zoom + 0.1f);
+				if (this.keyboard.IsClicked(Keys.Subtract) || scrollDelta < 0)
+					this.camera.Zoom = Math.Max(zoomMin, this.camera.Zoom - 0.1f);
 
-			if (this.currentMouseState.LeftButton == ButtonState.Pressed &&
-				this.previousMouseState.LeftButton == ButtonState.Pressed) {
-				this.camera.Move(-new Vector2(this.currentMouseState.X - this.previousMouseState.X, this.currentMouseState.Y - this.previousMouseState.Y) / this.camera.Zoom);
-			}
+				// Correct origin of zoom
+				this.camera.Position = new Vector2(
+					this.camera.Position.X -
+					this.camera.ViewSize.X / this.camera.Zoom *
+					(1 - this.camera.Zoom / prevZoom) *
+					(this.currentMouseState.X / (this.GraphicsDevice.Viewport.Width / 2f)),
+					this.camera.Position.Y -
+					this.camera.ViewSize.Y / this.camera.Zoom *
+					(1 - this.camera.Zoom / prevZoom) *
+					(this.currentMouseState.Y / (this.GraphicsDevice.Viewport.Height / 2f)));
 
-			// On mouse click
-			if (this.currentMouseState.LeftButton == ButtonState.Pressed &&
-				this.previousMouseState.LeftButton == ButtonState.Released) {
+				if (this.currentMouseState.LeftButton == ButtonState.Pressed &&
+					this.previousMouseState.LeftButton == ButtonState.Pressed) {
+					this.camera.Move(
+						-new Vector2(this.currentMouseState.X - this.previousMouseState.X,
+							this.currentMouseState.Y - this.previousMouseState.Y) / this.camera.Zoom);
+				}
 
-				
+				// On mouse click
+				if (this.currentMouseState.LeftButton == ButtonState.Pressed &&
+					this.previousMouseState.LeftButton == ButtonState.Released) {
+					// Check if build tower needs to be dropped
+					if (this.buildTower != null && !this.buildTower.IsDropped &&
+						this.buildTower.CanBeDropped) {
+						this.buildTower.IsDropped = true;
+						this.buildTower.Rebuild();
+						this.map.towersTree.AddComponent(this.buildTower);
+						this.player.Resources -= this.buildTower.Cost;
+						this.map.checkForCollision.Add(this.buildTower.Position);
+						this.minimapTowers.Add(new Rectangle(
+							this.minimapPosition + this.buildTower.Position * 4, 4,
+							this.buildTower.Color));
+						this.buildTower = null;
+					}
+				}
 
-				// Check if build tower needs to be dropped
-				if (this.buildTower != null && !this.buildTower.IsDropped &&
-					this.buildTower.CanBeDropped) {
-					this.buildTower.IsDropped = true;
+				// On right mouse click
+				if (this.currentMouseState.RightButton == ButtonState.Pressed &&
+					this.previousMouseState.RightButton == ButtonState.Released) {
+
+					// Activate menu
+					if (!this.isMenuActive) {
+						this.buildTower = null;
+						this.isMenuActive = true;
+						this.menuPosition = new Vector3(
+							this.currentMouseState.X,
+							this.currentMouseState.Y, 0);
+					}
+				}
+				else if (this.currentMouseState.RightButton == ButtonState.Released &&
+					this.previousMouseState.RightButton == ButtonState.Pressed) {
+					if (this.isMenuActive) {
+						this.isMenuActive = false;
+						// Build new tower
+						if (this.menuSelectedItemIndex == 0)
+							this.buildTower = new MachineGunTower(this.map);
+						else if (this.menuSelectedItemIndex == 1)
+							this.buildTower = new ShotGunTower(this.map);
+						else if (this.menuSelectedItemIndex == 5)
+							this.buildTower = new LaserTower(this.map);
+						// TODO Check released on menu
+					}
+				}
+
+				// Move build tower around
+				if (this.buildTower != null && !this.buildTower.IsDropped) {
+					this.buildTower.Position = Position.Clamp(this.pointerPosition,
+						Position.Zero, this.map.mapRange.LowerRight - 1);
+
+					// Check collision
+					this.buildTower.CanBeDropped =
+						!this.map.towersTree.GetComponents(this.buildTower.Position).Any() &&
+						this.player.Resources - this.buildTower.Cost >= 0;
+
 					this.buildTower.Rebuild();
-					this.map.towersTree.AddComponent(this.buildTower);
-					this.player.Resources -= this.buildTower.Cost;
-					this.map.checkForCollision.Add(this.buildTower.Position);
-					this.buildTower = null;
 				}
-			}
-
-			// On right mouse click
-			if (this.currentMouseState.RightButton == ButtonState.Pressed &&
-				this.previousMouseState.RightButton == ButtonState.Released) {
-
-				// Activate menu
-				if (!this.isMenuActive) {
-					this.buildTower = null;
-					this.isMenuActive = true;
-					this.menuPosition = new Vector3(
-						this.currentMouseState.X,
-						this.currentMouseState.Y, 0);
-				}
-			}
-			else if (this.currentMouseState.RightButton == ButtonState.Released &&
-				this.previousMouseState.RightButton == ButtonState.Pressed) {
-				if (this.isMenuActive) {
-					this.isMenuActive = false;
-					// Build new tower
-					if (this.menuSelectedItemIndex == 0)
-						this.buildTower = new MachineGunTower(this.map);
-					else if (this.menuSelectedItemIndex == 1)
-						this.buildTower = new ShotGunTower(this.map);
-					else if (this.menuSelectedItemIndex == 5)
-						this.buildTower = new LaserTower(this.map);
-					// TODO Check released on menu
-				}
-			}
-
-			// Move build tower around
-			if (this.buildTower != null && !this.buildTower.IsDropped) {
-				this.buildTower.Position = Position.Clamp(this.pointerPosition,
-					Position.Zero, this.map.mapRange.LowerRight - 1);
-
-				// Check collision
-				this.buildTower.CanBeDropped =
-					!this.map.towersTree.GetComponents(this.buildTower.Position).Any();
-
-				this.buildTower.Rebuild();
 			}
 		}
 
@@ -248,26 +278,52 @@ namespace Game {
 
 #if DEBUG
 			//DrawChildren(drawer, this.map.towersTree.RootNode);
-			DrawChildren(drawer, this.map.enemiesTree.RootNode);
+			//DrawChildren(drawer, this.map.enemiesTree.RootNode);
 #endif
 			this.drawer.End();
 
 			// Draw camera independent elements
 			this.drawer.Begin();
 
-			this.drawer.Write(this.player.Name, new Vector2(20, 20));
-			this.drawer.Write(this.player.Resources.ToString(), new Vector2(20, 40));
+			//this.drawer.Write(this.player.Name, new Vector2(20, 20));
+			this.drawer.Write(this.scoreFont, this.player.Resources.ToString(), new Vector2(20, 20), Color.White);
+			this.drawer.Write(this.scoreFont, this.player.Score.ToString(), new Vector2(20, 80), Color.White);
 
 			if (this.isMenuActive)
 				this.DrawMenu(drawer, this.timeController.Time);
 
+			// Draw minimap
 			drawer.Draw(this.minimapBackground);
-			foreach (var enemy in this.map.enemiesTree.GetAllComponents()) {
+			drawer.Draw(new Rectangle(this.map.protectBlock * 4 + this.minimapPosition, 4,
+				Color.Red));
+			foreach (var enemySpawn in this.map.enemySpawns) {
+				drawer.Draw(new Rectangle(enemySpawn * 4 + this.minimapPosition, 4,
+					Color.YellowGreen));
+			}
+			foreach (var tower in this.minimapTowers)
+				drawer.Draw(tower);
+			foreach (var enemy in this.map.enemiesTree.GetAllComponents())
 				drawer.Draw(new Rectangle(enemy.Position * 4 + this.minimapPosition, 4,
 					enemy.Color));
-			}
 
 			this.drawer.End();
+
+			if (this.isGameOver) {
+				drawer.Begin();
+				drawer.Draw(new SquaredEngine.Graphics.Rectangle(new Vector3(),
+					new Vector3(this.GraphicsDevice.Viewport.Width,
+						this.GraphicsDevice.Viewport.Height, 0), new Color(0, 0, 0, 128)));
+				var gameOverMes = this.gameOverFont.MeasureString("Game Over");
+				drawer.Write(this.gameOverFont, "Game Over", new Vector2(
+					this.GraphicsDevice.Viewport.Width / 2 - gameOverMes.X / 2,
+					this.GraphicsDevice.Viewport.Height / 2 - gameOverMes.Y / 2), Color.White);
+				drawer.Write(this.gameOverFont, "Score: " + this.player.Score, new Vector2(
+					this.GraphicsDevice.Viewport.Width / 2 - gameOverMes.X / 2,
+					this.GraphicsDevice.Viewport.Height / 2 - gameOverMes.Y / 2 + 80), Color.White);
+				drawer.Draw(this.potatoTexture, new Microsoft.Xna.Framework.Rectangle(
+					0, this.GraphicsDevice.Viewport.Height - 256, 256, 256), Color.White);
+				drawer.End();
+			}
 		}
 
 		private void DrawMenu(GraphicsDrawer drawer, Time time) {
@@ -302,16 +358,16 @@ namespace Game {
 						points[1].ToVector2() +
 						new Vector2(-(this.menuTopSideSize - this.menuBottomSideSize) / 5,
 							this.menuItemHeight / 2), Color.White);
-				else if (index == 2)
-					drawer.Draw(this.canonLogo,
-						points[3].ToVector2() +
-						new Vector2(-(this.menuTopSideSize - this.menuBottomSideSize) / 6,
-							this.menuItemHeight / 6), Color.White);
-				else if (index == 4)
-					drawer.Draw(this.canonLogo,
-						points[3].ToVector2() +
-						new Vector2(-(this.menuTopSideSize - this.menuBottomSideSize) / 6,
-							this.menuItemHeight / 6), Color.White);
+				//else if (index == 2)
+				//    drawer.Draw(this.canonLogo,
+				//        points[3].ToVector2() +
+				//        new Vector2(-(this.menuTopSideSize - this.menuBottomSideSize) / 6,
+				//            this.menuItemHeight / 6), Color.White);
+				//else if (index == 4)
+				//    drawer.Draw(this.canonLogo,
+				//        points[3].ToVector2() +
+				//        new Vector2(-(this.menuTopSideSize - this.menuBottomSideSize) / 6,
+				//            this.menuItemHeight / 6), Color.White);
 				else if (index == 5)
 					drawer.Draw(this.laserLogo,
 						points[2].ToVector2() +
@@ -352,6 +408,10 @@ namespace Game {
 			foreach (var child in node.Children) {
 				DrawChildren<K>(gd, child);
 			}
+		}
+
+		public void GameOver() {
+			this.isGameOver = true;
 		}
 	}
 }

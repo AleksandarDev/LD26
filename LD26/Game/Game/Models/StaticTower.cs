@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
@@ -20,7 +21,7 @@ using SquaredEngine.Common;
 using SquaredEngine.Diagnostics.Debug;
 using SquaredEngine.Graphics;
 using SquaredEngine.Input;
-using SquaredEngine.Utils.Trees.QuadTree;
+using IComponent = SquaredEngine.Utils.Trees.QuadTree.IComponent;
 using IDrawable = SquaredEngine.Graphics.IDrawable;
 using Rectangle = SquaredEngine.Graphics.Rectangle;
 
@@ -49,7 +50,8 @@ namespace Game.Models {
 		public IEnumerable<PathNode> GetSuccessors() {
 			for (int y = -1; y < 2; y++) {
 				for (int x = -1; x < 2; x++) {
-					if (Math.Abs(x) == Math.Abs(y) || (y == 0 && x == 0) || y + this.Y < 0 || x + this.X < 0)
+					if (Math.Abs(x) == Math.Abs(y) || (y == 0 && x == 0) || y + this.Y < 0 ||
+						x + this.X < 0 || x + this.X >= Map.MapSize || y + this.Y >= Map.MapSize)
 						continue;
 					if (Parent != null && (this.Y + y == Parent.Y && this.X + x == Parent.X))
 						continue;
@@ -93,6 +95,7 @@ namespace Game.Models {
 
 	public class Enemy : IComponent {
 		private static readonly Color EnemyColor = Color.Blue;
+		public static int CurrentLevel = 0;
 
 
 		int IComponent.Key { get; set; }
@@ -138,7 +141,7 @@ namespace Game.Models {
 			this.movePath = new Stack<PathNode>();
 			this.IsFindingPath = true;
 
-			this.HealthMax = 300.0;
+			this.HealthMax = 300.0 + CurrentLevel * 5;
 			this.HealthCurrent = this.HealthMax;
 
 			this.barOffset = new Vector3(-Map.MapGridSizeOver2, -Map.MapGridSizeOver2 - 10, 0);
@@ -293,6 +296,9 @@ namespace Game.Models {
 
 		public void Kill() {
 			this.Map.enemiesTree.RemoveComponent(this);
+			CurrentLevel += this.Map.enemySpawns.Count;
+			this.Map.Game.player.Resources += 25 * (1 + (Enemy.CurrentLevel / 50));
+			this.Map.Game.player.Score++;
 		}
 
 		public void DoDamage(double damage) {
@@ -343,6 +349,9 @@ namespace Game.Models {
 			this.Range = 10;
 			this.SafeRange = 7;
 			this.FireDamageDelay = 70;
+
+			this.Cost = 1000;
+			this.TowerColor = Color.Purple;
 
 			this.Bullets = new List<LaserBullet>();
 		}
@@ -404,6 +413,8 @@ namespace Game.Models {
 			this.SafeRange = 2;
 			this.FireDamageDelay = 100;
 
+			this.Cost = 250;
+
 			this.Bullets = new List<Bullet>();
 		}
 
@@ -455,8 +466,8 @@ namespace Game.Models {
 		}
 	}
 
-	public class ShotGunTower : StaticTower
-	{
+	public class ShotGunTower : StaticTower {
+		public static new SoundEffect effect;
 		public List<Bullet> Bullets;
 
 
@@ -464,10 +475,14 @@ namespace Game.Models {
 			: base(map)
 		{
 			this.FireRateDelay = 700;
-			this.Damage = 180;
+			this.Damage = 80;
 			this.Range = 4;
 			this.SafeRange = 1;
 			this.FireDamageDelay = 100;
+
+			this.TowerColor = Color.RosyBrown;
+
+			this.Cost = 400;
 
 			this.Bullets = new List<Bullet>();
 		}
@@ -483,7 +498,7 @@ namespace Game.Models {
 				{
 					Random random = new Random();
 					float randomnesMul = (float)(this.FiringOnDistance / this.Range) * 2f;
-					Bullet.effect.Play(0.5f, 0, 0);
+					effect.Play(0.5f, 0, 0);
 					for (int index = 0; index < 10; index++) {
 						this.Bullets.Add(new Bullet()
 						{
@@ -572,9 +587,9 @@ namespace Game.Models {
 		public const float TowerSize = Map.MapGridSizeOver2;
 		public const float TowerSizeD = TowerSize * 2f;
 
-		private static readonly Color TowerBuildCan = Color.ForestGreen;
-		private static readonly Color TowerBuildObsticle = Color.Red;
-		private static readonly Color TowerColor = Color.DarkOrange;
+		public static readonly Color TowerBuildCan = Color.ForestGreen;
+		public static readonly Color TowerBuildObsticle = Color.Red;
+		public Color TowerColor = Color.DarkOrange;
 
 		public Map Map;
 
